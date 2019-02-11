@@ -1,0 +1,30 @@
+class detected	number of patients
+ID, ASD.Autistic.traits	39
+ID	24
+ID, ASD.Autistic.traits, Epilepsy	21
+ID, Epilepsy	9
+ID, Hypotonia	8
+ID, ASD.Autistic.traits, Epilepsy, Hypotonia	4
+ID, ASD.Autistic.traits, Hypotonia	4
+ID, ASD.Autistic.traits, Epilepsy, Microcephaly	3
+ID, ASD.Autistic.traits, Epilepsy, Microcephaly, Hypotonia	3
+ID, ASD.Autistic.traits, Epilepsy, Ataxia	3
+ID, Epilepsy, Microcephaly	3
+ID, ASD.Autistic.traits, Macrocephaly	3
+ID, ASD.Autistic.traits, Microcephaly	3
+ID, ASD.Autistic.traits, Epilepsy, Macrocephaly	3
+ID, Epilepsy, Ataxia	2
+ID, ASD.Autistic.traits, Microcephaly, Hypotonia	2
+ID, Macrocephaly	2
+ASD.Autistic.traits, Macrocephaly	2
+ASD.Autistic.traits	2
+ID, ASD.Autistic.traits, Hypotonia, Ataxia	1
+ID, Ataxia	1
+ID, Epilepsy, Hypotonia, Ataxia	1
+ID, ASD.Autistic.traits, Epilepsy, Hypotonia, Ataxia	1
+ID, Microcephaly	1
+ID, ASD.Autistic.traits, Epilepsy, Microcephaly, Hypotonia, Ataxia	1
+ID, Microcephaly, Hypotonia	1
+ID, ASD.Autistic.traits, Macrocephaly, Hypotonia	1
+ID, ASD.Autistic.traits, Microcephaly, Ataxia	1
+ID, Epilepsy, Macrocephaly, Hypotonia	1

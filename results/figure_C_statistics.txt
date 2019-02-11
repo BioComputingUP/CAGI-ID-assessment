@@ -1,0 +1,5 @@
+ID	ASD Autistic traits	Epilepsy	Microcephaly	Macrocephaly	Hypotonia	Ataxia
+Yes	146	97	55	18	12	28	11
+No	4	38	50	63	69	40	43
+NA	0	15	45	69	69	82	96
+Total	150	135	105	81	81	68	54
