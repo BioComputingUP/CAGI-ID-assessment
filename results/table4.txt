@@ -12,4 +12,3 @@ Submission ID	Correctly predicted variants	Total predicted variants	Correctly pr
 4.1	16	157	0.29	0.1
 4.2	10	113	0.18	0.09
 4.3	29	290	0.52	0.1
-5.1	36	285	0.64	0.13

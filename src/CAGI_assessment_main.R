@@ -197,11 +197,11 @@ if(TRUE){
   ############
   
   # make variant statistics:
-  matr.cv <- matrix(data = "empty", nrow = length(submission.files), ncol = 2)
-  matr.pcv <- matrix(data = "empty", nrow = length(submission.files), ncol = 2)
-  matr.cf <- matrix(data = "empty", nrow = length(submission.files), ncol = 2)
+  matr.cv <- matrix(data = "empty", nrow = length(submission.files)-1, ncol = 2)
+  matr.pcv <- matrix(data = "empty", nrow = length(submission.files)-1, ncol = 2)
+  matr.cf <- matrix(data = "empty", nrow = length(submission.files)-1, ncol = 2)
   
-  for(j in 1:length(submission.files)) {
+  for(j in 1:(length(submission.files)-1)) { # remove group 5
     CurrentSubmission <- submission.files[j]
     #print("***************************************************************")
     #print(paste(basename(CurrentSubmission), "->", j))
@@ -238,12 +238,11 @@ if(TRUE){
   colnames(total.vars.results) <- c("Submission ID", "# causative variants", "# putative causative variants", "# contributing factor variants", "total predicted variants", "rank")
 
   # find total number of variants for each prediction
-  V.list <-  vector(length = length(submission.files))
-  ID <- rep("empty", length(submission.files))
+  V.list <-  vector(length = length(submission.files)-1)
+  ID <- rep("empty", length(submission.files)-1)
   
-  for (i in 1:length(submission.files)) {
+  for (i in 1:(length(submission.files)-1)) {
     prediction <- strsplit(scan(file = submission.files[i], what = character(), sep = "\n", quiet = T) , "\t")
-    #Sub.name <- strsplit(submission.files.name[i],"(?=[.])", perl = TRUE)[[1]][1]
     Sub.name <- strsplit(submission.files.name[i],"(?=[-._])", perl = TRUE)[[1]]
     ID[i] <- paste(Sub.name[grep('[0-9]', Sub.name)], collapse  = ".")
     header <- prediction[[1]]
@@ -316,59 +315,72 @@ var.general.table <- rbind(table.caus, table.dis, table.put)
 #################
 
 
+
 if(TRUE){
-  
-  V.list <-  vector(mode = 'list', length = length(submission.files))
-  ID <- rep("empty", length(submission.files))
-  for (i in 1:length(submission.files)) {
-    prediction <- strsplit(scan(file = submission.files[i], what = character(), sep = "\n", quiet = T) , "\t")
-    Sub.name <- strsplit(submission.files.name[i],"(?=[-._])", perl = TRUE)[[1]]
-    ID[i] <- paste(Sub.name[grep('[0-9]', Sub.name)], collapse  = ".")
-    header <- prediction[[1]]
-    col_of_V <- grepl('-V', header)
-    V <- sapply(2:length(prediction), function(x) prediction[[x]][col_of_V])
-    V <- t(V)
-    for(k in 1:nrow(V)){
-      for(j in 1:ncol(V)){
-        V[k,j] <- paste(unique(strsplit(V[k,j], ",")[[1]]), collapse = ",") # someone put the same variant multiple times in the same cell
+  ComputeVariantStatistics<- function( submissions.number = 13){
+    V.list <-  vector(mode = 'list', length = submissions.number)
+    ID <- rep("empty", submissions.number)
+    for (i in 1:submissions.number) {
+      prediction <- strsplit(scan(file = submission.files[i], what = character(), sep = "\n", quiet = T) , "\t")
+      Sub.name <- strsplit(submission.files.name[i],"(?=[-._])", perl = TRUE)[[1]]
+      ID[i] <- paste(Sub.name[grep('[0-9]', Sub.name)], collapse  = ".")
+      header <- prediction[[1]]
+      col_of_V <- grepl('-V', header)
+      V <- sapply(2:length(prediction), function(x) prediction[[x]][col_of_V])
+      V <- t(V)
+      for(k in 1:nrow(V)){
+        for(j in 1:ncol(V)){
+          V[k,j] <- paste(unique(strsplit(V[k,j], ",")[[1]]), collapse = ",") # someone put the same variant multiple times in the same cell
+        }
+      }
+      V <- as.character(V)
+      V <- unlist(sapply(1:length(V), function(x){unlist(strsplit(V[x], ","))}))
+      V.list[[i]] <- V
+    }
+    Variant.Matrix <- matrix(data = 0, ncol =submissions.number, nrow = nrow(var.general.table) )
+    colnames(Variant.Matrix) <- ID
+    for (i in 1:nrow(var.general.table)){
+      for(j in 1:submissions.number){
+        Variant.Matrix[i, j] <- length(grep(paste("^", var.general.table[i, 2], "$",  sep = ""), V.list[[j]]))
       }
     }
-    V <- as.character(V)
-    V <- unlist(sapply(1:length(V), function(x){unlist(strsplit(V[x], ","))}))
-    V.list[[i]] <- V
-  }
-  Variant.Matrix <- matrix(data = 0, ncol =length(submission.files), nrow = nrow(var.general.table) )
-  colnames(Variant.Matrix) <- ID
-  for (i in 1:nrow(var.general.table)){
-    for(j in 1:length(submission.files)){
-      Variant.Matrix[i, j] <- length(grep(paste("^", var.general.table[i, 2], "$",  sep = ""), V.list[[j]]))
+    number.of.pred.predicting <- sapply(1:nrow(Variant.Matrix), function(x){length(which(Variant.Matrix[x, ]>0))})
+    id.of.predictors <- sapply(1:nrow(Variant.Matrix), function(x){paste(colnames(Variant.Matrix)[which(Variant.Matrix[x, ]>0)], collapse =", ")})
+    # find number of group correctly predicting
+    if(submissions.number==14){
+      group.var.Matrix <- cbind(Variant.Matrix[,1], rowSums(Variant.Matrix[, c(2:7)]), rowSums(Variant.Matrix[, c(8:10)]), rowSums(Variant.Matrix[, c(11:13)]), Variant.Matrix[, 14]) 
+      colnames(group.var.Matrix) <- seq(1:5)
+    } else {
+      group.var.Matrix <- cbind(Variant.Matrix[,1], rowSums(Variant.Matrix[, c(2:7)]), rowSums(Variant.Matrix[, c(8:10)]), rowSums(Variant.Matrix[, c(11:13)])) 
+      colnames(group.var.Matrix) <- seq(1:4)
     }
+    number.of.group.predicting <- sapply(1:nrow(group.var.Matrix), function(x){length(which(group.var.Matrix[x, ]>0))})
+    id.of.groups.predicting <- sapply(1:nrow(group.var.Matrix), function(x){paste(colnames(group.var.Matrix)[which(group.var.Matrix[x, ]>0)], collapse = ", ")})
+    total.by.variant <- rowSums(Variant.Matrix)
+    total.by.group <- colSums(Variant.Matrix)
+    Results.matrix <- cbind(var.general.table[, c(1,3,2)], number.of.group.predicting, id.of.groups.predicting, number.of.pred.predicting, id.of.predictors)
+    colnames(Results.matrix) <- c("Name", "Class of variant", "Chr", "Number of Groups", "ID of Groups", "Number of predictions", "Predictions ID")
+    Results.matrix <- Results.matrix[, c(1, 2, 3, 4, 6, 5, 7)]
+    t.cf <- Results.matrix[grepl("Contributing factor", Results.matrix$`Class of variant` ),] [order(-Results.matrix$`Number of predictions`[grepl("Contributing factor", Results.matrix$`Class of variant` )]), ]
+    t.dc <- Results.matrix[grepl("Disease causing", Results.matrix$`Class of variant` ),] [order(-Results.matrix$`Number of predictions`[grepl("Disease causing", Results.matrix$`Class of variant` )]), ]
+    t.p <- Results.matrix[grepl("Putative", Results.matrix$`Class of variant` ),] [order(-Results.matrix$`Number of predictions`[grepl("Putative", Results.matrix$`Class of variant` )]), ]
+    return( list(t.cf, t.dc, t.p))
   }
-  number.of.pred.predicting <- sapply(1:nrow(Variant.Matrix), function(x){length(which(Variant.Matrix[x, ]>0))})
-  id.of.predictors <- sapply(1:nrow(Variant.Matrix), function(x){paste(colnames(Variant.Matrix)[which(Variant.Matrix[x, ]>0)], collapse =", ")})
-  # find number of group correctly predicting
-  group.var.Matrix <- cbind(Variant.Matrix[,1], rowSums(Variant.Matrix[, c(2:7)]), rowSums(Variant.Matrix[, c(8:10)]), rowSums(Variant.Matrix[, c(11:13)]), Variant.Matrix[, 14]) 
-  colnames(group.var.Matrix) <- seq(1:5)
-  number.of.group.predicting <- sapply(1:nrow(group.var.Matrix), function(x){length(which(group.var.Matrix[x, ]>0))})
-  id.of.groups.predicting <- sapply(1:nrow(group.var.Matrix), function(x){paste(colnames(group.var.Matrix)[which(group.var.Matrix[x, ]>0)], collapse = ", ")})
-  total.by.variant <- rowSums(Variant.Matrix)
-  total.by.group <- colSums(Variant.Matrix)
-  Results.matrix <- cbind(var.general.table[, c(1,3,2)], number.of.group.predicting, id.of.groups.predicting, number.of.pred.predicting, id.of.predictors)
-  colnames(Results.matrix) <- c("Name", "Class of variant", "Chr", "Number of Groups", "ID of Groups", "Number of predictions", "Predictions ID")
-  Results.matrix <- Results.matrix[, c(1, 2, 3, 4, 6, 5, 7)]
-  t.cf <- Results.matrix[grepl("Contributing factor", Results.matrix$`Class of variant` ),] [order(-Results.matrix$`Number of predictions`[grepl("Contributing factor", Results.matrix$`Class of variant` )]), ]
-  t.dc <- Results.matrix[grepl("Disease causing", Results.matrix$`Class of variant` ),] [order(-Results.matrix$`Number of predictions`[grepl("Disease causing", Results.matrix$`Class of variant` )]), ]
-  t.p <- Results.matrix[grepl("Putative", Results.matrix$`Class of variant` ),] [order(-Results.matrix$`Number of predictions`[grepl("Putative", Results.matrix$`Class of variant` )]), ]
-  Results.matrix <- rbind(t.cf, t.dc, t.p)
+  Results.Variants <- ComputeVariantStatistics(submissions.number = 14) # consider all submissions for supplementary table 1
+  Results.matrix <- rbind(Results.Variants[[1]], Results.Variants[[2]], Results.Variants[[3]])
   write.table(file = './results/tableS1.txt', Results.matrix, sep = '\t', row.names = F, col.names = T, quote = F)
   
   #################
   # figure 6 ######
   #################
   
+  Results.Variants <- ComputeVariantStatistics(submissions.number = 13) # avoid submission 5.1 in figure 6
+  t.cf <- Results.Variants[[1]]
+  t.dc <- Results.Variants[[2]]
+  t.p <- Results.Variants[[3]]
   Results.matrix <- rbind(cbind(rep("Contributing", length(summary(as.factor(t.cf$`Number of Groups`)))), summary(as.factor(t.cf$`Number of Groups`)), names(summary(as.factor(t.cf$`Number of Groups`)))),
-        cbind(rep("Causative", length(summary(as.factor(t.dc$`Number of Groups`)))), summary(as.factor(t.dc$`Number of Groups`)), names(summary(as.factor(t.dc$`Number of Groups`)))),
-        cbind(rep("Putative", length(summary(as.factor(t.p$`Number of Groups`)))), summary(as.factor(t.p$`Number of Groups`)), names(summary(as.factor(t.p$`Number of Groups`)))))
+                          cbind(rep("Causative", length(summary(as.factor(t.dc$`Number of Groups`)))), summary(as.factor(t.dc$`Number of Groups`)), names(summary(as.factor(t.dc$`Number of Groups`)))),
+                          cbind(rep("Putative", length(summary(as.factor(t.p$`Number of Groups`)))), summary(as.factor(t.p$`Number of Groups`)), names(summary(as.factor(t.p$`Number of Groups`)))))
   Results.matrix <- suppressWarnings(data.frame(Results.matrix, stringsAsFactors = F))
   colnames(Results.matrix) <- c("variant", "count", "NG")
   Results.matrix$variant <- factor(Results.matrix$variant, levels = c("Causative", "Putative", "Contributing"))
@@ -386,10 +398,12 @@ if(TRUE){
           axis.text = element_text(size = 8)) + 
     guides(fill=guide_legend(title="Number of Groups")) +
     ylab("Number of variants")
-    print(p+scale_fill_brewer(palette = "Spectral"))
+  print(p+scale_fill_brewer(palette = "Spectral"))
   dev.off()    
-
+  
 }
+
+
 
 ##################
 # figure C #######
@@ -461,7 +475,8 @@ if(TRUE){
     rocs <- c(roc.perf)
     abline(a=0, b=1, col="white", lty=2)
     color.group = c(rep("red", 1), rep("blue", 6), rep("purple", 3), rep("black", 3), "pink")
-    legend("bottomright", legend = c("Group 1", "Group 2", "Group 3", "Group 4", "Group 5"), fill = c('red', 'blue', 'purple', 'black', "pink"), cex = 0.6)
+    legend("bottomright", legend = c("Group 1", "Group 2", "Group 3", "Group 4"), fill = c('red', 'blue', 'purple', 'black'), cex = 0.6)
+    #legend("bottomright", legend = c("Group 1", "Group 2", "Group 3", "Group 4", "Group 5"), fill = c('red', 'blue', 'purple', 'black', "pink"), cex = 0.6)
     for(j in 1:length(submission.files)) {
       CurrentSubmission <- submission.files[j]
       print(paste(basename(CurrentSubmission), "->", j))
@@ -475,7 +490,7 @@ if(TRUE){
       occurrence.by.disease[j, d] <- length(which(!is.na(as.numeric(values))))
       values[which(is.na(values))] <- 0 # P values * are converted to 0
     
-      if(length(unique(labels[which(!is.na(values))]))==2) 
+      if(length(unique(labels[which(!is.na(values))])) == 2) 
       {
         pred <- prediction(values, labels)
         
@@ -529,7 +544,9 @@ if(TRUE){
         performances[j,13] <- fp
         
         heat.map.performances[j, d] <- auc.best.perf
-        plot(roc.perf, col = color.group[j], add = TRUE)
+        if(j!=length(submission.files)){
+          plot(roc.perf, col = color.group[j], add = TRUE)
+        }
 
         # store MCC threshold for other functions
         matrix.threshold[j, d] <- pred@cutoffs[[1]][mcc.best.perf.id] # extract threshold of best MCC
@@ -553,13 +570,14 @@ if(TRUE){
 
  # create a table showing group and predictors that have classified a patient as case (one table for each class)
 
+
 if(TRUE){
-  ID.col <- c("disease", submission.files.name)
+  ID.col <- c("disease", submission.files.name[1:(length(submission.files.name)-1)])
   disease.matrix.list <- vector(mode = "list", length = 7)
   for(d in 1:length(exp.val.classes)) {
     exp.val.classes.labels <- matrix(as.numeric(exp.val.classes[, d]))
-    matrix.disease  <- matrix(NA, nrow = length(exp.val.classes.labels), ncol = length(submission.files))
-    for(j in 1:length(submission.files)) {
+    matrix.disease  <- matrix(NA, nrow = length(exp.val.classes.labels), ncol = (length(submission.files)-1))
+    for(j in 1:(length(submission.files)-1)) {
       CurrentSubmission <- submission.files[j]
       lines <- scan(file = CurrentSubmission ,what = character(), sep = "\n", quiet = T)
       header <- strsplit(lines[1], "\t")[[1]]
@@ -584,8 +602,8 @@ if(TRUE){
     number.of.pred.predicting <- sapply(1:nrow(Variant.Matrix), function(x){length(which(Variant.Matrix[x, ]>0))})
     id.of.predictors <- sapply(1:nrow(Variant.Matrix), function(x){paste(colnames(Variant.Matrix)[which(Variant.Matrix[x, ]>0)], collapse =", ")})
     # find number of group correctly predicting
-    group.var.Matrix <- cbind(Variant.Matrix[,1], rowSums(Variant.Matrix[, c(2:7)]), rowSums(Variant.Matrix[, c(8:10)]), rowSums(Variant.Matrix[, c(11:13)]), Variant.Matrix[, 14]) 
-    colnames(group.var.Matrix) <- seq(1:5)
+    group.var.Matrix <- cbind(Variant.Matrix[,1], rowSums(Variant.Matrix[, c(2:7)]), rowSums(Variant.Matrix[, c(8:10)]), rowSums(Variant.Matrix[, c(11:13)])) #, Variant.Matrix[, 14]) 
+    colnames(group.var.Matrix) <- seq(1:4) #5)
     number.of.group.predicting <- sapply(1:nrow(group.var.Matrix), function(x){length(which(group.var.Matrix[x, ]>0))})
     id.of.groups.predicting <- sapply(1:nrow(group.var.Matrix), function(x){paste(colnames(group.var.Matrix)[which(group.var.Matrix[x, ]>0)], collapse = ", ")})
     
@@ -594,7 +612,7 @@ if(TRUE){
     Results.matrix <- cbind(disease.matrix.list[[i]][, 1 ], Variant.Matrix, total.by.variant, number.of.group.predicting, id.of.groups.predicting, number.of.pred.predicting, id.of.predictors)
     # add total by row to matrix
     colnames(Results.matrix)[c(1, (length(colnames(Results.matrix))-4):length(colnames(Results.matrix)))] <-c("Presence", "total predicted", "Number of Groups predicting", "ID of Groups predicting", "Total numbers of predictions", "Predictions ID")
-    Results.matrix <- cbind(c(1:length(temp)), temp, Results.matrix[, c(1, 19, 17, 18, 20) ])
+    Results.matrix <- cbind(c(1:length(temp)), temp, Results.matrix[, c(1, 18, 16, 17, 19) ])
     colnames(Results.matrix)[c(1,2)] <- c("patient CAGI ID", "patient ID")
     write.table(file = paste('./results/match_', names(diseases)[i],'_FR.txt', sep = ""), Results.matrix, sep = '\t', row.names = F, col.names = T, quote = F)
   }
@@ -753,7 +771,7 @@ if(TRUE){
     )
     dev.off()    
   }
-  MakeSupFig1(variants.only = T)
+  #MakeSupFig1(variants.only = T)
   MakeSupFig1(variants.only = F)
 }
 
@@ -867,7 +885,7 @@ if(TRUE){
    nC.vector <- sapply(1:7, function(x){length(grep(submission.files.name[i], tab.p.v[which(tab.p.v[, 2] == as.character(x)), 7], fixed = T))})
    mat.p.v[i, 2:ncol(mat.p.v)] <- c(nC, nCV, nCCV, nC.vector)
   }
-  write.table(mat.p.v, './results/general_table_pat_with_v.txt', sep = "\t" , quote = F, row.names = F)
+  #write.table(mat.p.v, './results/general_table_pat_with_v.txt', sep = "\t" , quote = F, row.names = F)
   for (i in (1:length(submission.files.name))) {
     nC <- length(grep(submission.files.name[i], result.matrix.corr[, 7], fixed = T))
     nCV <- length(grep(submission.files.name[i], result.matrix.corr[, 8], fixed = T))
@@ -888,18 +906,20 @@ if(TRUE){
 
 if(TRUE){
   heat.map.performances[which(is.na(heat.map.performances))] <- 0 # produced in ROC by disease script
-  complete.score.matrix <- heat.map.performances
+  complete.score.matrix <- heat.map.performances[1:13, ]
   complete.score.matrix.rank <- data.frame(sapply(1:ncol(complete.score.matrix), function(x) {rank(-complete.score.matrix[, x], ties.method = "average")}))
   rownames(complete.score.matrix.rank) <- c(rownames(complete.score.matrix))
   colnames(complete.score.matrix.rank) <- c(colnames(complete.score.matrix))
   complete.score.matrix.rank <- cbind(complete.score.matrix.rank, rep(NA, nrow(complete.score.matrix.rank)), rep(NA, nrow(complete.score.matrix.rank)))
   colnames(complete.score.matrix.rank) <- c(colnames(complete.score.matrix), "AVG", "Final")
   complete.score.matrix.rank$AVG <- rowMeans(complete.score.matrix.rank, na.rm = TRUE)
-  complete.score.matrix.rank$Final <- rank(complete.score.matrix.rank$AVG, ties.method = "average")
+  complete.score.matrix.rank$Final <- rank(complete.score.matrix.rank$AVG, ties.method = "min")
   complete.score.matrix.rank.sorted <- complete.score.matrix.rank[order(complete.score.matrix.rank$Final), ]
   complete.score.matrix.rank.sorted$AVG <- round(complete.score.matrix.rank.sorted$AVG, digits = 2)
-  complete.score.matrix.rank.sorted$Final <- round(complete.score.matrix.rank.sorted$Final, digits = 0)
+  complete.score.matrix.rank.sorted$Final <- round(complete.score.matrix.rank.sorted$Final, digits = 1)
   write.table(complete.score.matrix.rank.sorted, file='./results/table_3.txt', sep = "\t" , quote = F, col.names = NA)
+ 
+  write.table(heat.map.performances[1:13, ][order(complete.score.matrix.rank$Final), ], file='./results/AUC_all.txt', sep = "\t" , quote = F, col.names = NA)
   
   complete.score.matrix.sorted <- round(complete.score.matrix[order(complete.score.matrix.rank$Final), ], 2)
   cellcolors<-matrix(NA, ncol(complete.score.matrix.sorted), ncol(complete.score.matrix.sorted))
@@ -916,4 +936,15 @@ if(TRUE){
   axis(2,at=0.5:nrow(complete.score.matrix.sorted),las=2,labels=rev(gsub("_", ".", gsub("Submission_", "Submssion ", rownames(complete.score.matrix.sorted)))))
   ppi = 600
   dev.off()
+}
+
+
+if(TRUE){ #remove tables and figures not in paper
+  rem.list <- list.files("./results", full.names = T)
+  if(any(file.exists(rem.list[grep("match", rem.list)]))){
+    file.remove(rem.list[grep("match", rem.list)])
+  } 
+  if(any(file.exists(rem.list[grep("./results/AUC_all.txt", rem.list)]))){
+    file.remove(rem.list[grep("./results/AUC_all.txt", rem.list)])
+  } 
 }

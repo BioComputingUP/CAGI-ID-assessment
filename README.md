@@ -14,9 +14,9 @@ R:
 to run all analyses, you have just to run the following command: Rscript ./src/CAGI_assessment_main.R
       This script will compute all statistics and make plots
       This script expects a folder structure like this to run:
-      ./src <- contains all scripts
-      ./results <- will contain all performance tables and plots
-      ./data <- has to contain 3 folders: experimental_value, submissions, template 
+            * ./src : contains all scripts
+            * ./results : will contain all performance tables and plots
+            * ./data : has to contain 3 folders: experimental_value, submissions, template 
       
       These are Input needed:
             * experimental values file  in ./data/experimental_value
